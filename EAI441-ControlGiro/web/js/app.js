@@ -1,5 +1,5 @@
 
-const API_URL = "http://localhost:3000/api/system";
+const API_URL = "https://eai441-control-giro-api.onrender.com/api/system";
 
 const elements = {
   distance: document.getElementById("distanceValue"),
