@@ -1,0 +1,288 @@
+
+:root {
+  --navy: #102a56;
+  --blue: #174ea6;
+  --yellow: #f5c542;
+  --background: #f3f6fb;
+  --text: #182536;
+  --muted: #66758a;
+  --border: #e1e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.topbar {
+  color: white;
+  background: linear-gradient(120deg, #102a56, #173e78);
+  border-bottom: 4px solid var(--yellow);
+}
+
+.eyebrow {
+  color: #8a9db8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  margin-bottom: 0.5rem;
+}
+
+.topbar .eyebrow {
+  color: #f5d875;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  padding: 5px;
+  border-radius: 14px;
+  background: white;
+  color: var(--navy);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.brand-mark img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.welcome h2 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 800;
+}
+
+.panel {
+  padding: 24px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 5px 22px rgb(16 42 86 / 5%);
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #13814b;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #20b26b;
+}
+
+.distance-display {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 25px;
+  color: var(--navy);
+}
+
+.distance-display #distanceValue {
+  font-size: clamp(3rem, 7vw, 4.8rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.distance-unit {
+  font-size: 1.2rem;
+  color: var(--muted);
+}
+
+.distance-progress {
+  height: 9px;
+  border-radius: 20px;
+  background: #eaf0f7;
+}
+
+.distance-progress .progress-bar {
+  background: var(--blue);
+  transition: width 0.25s ease;
+}
+
+.motor-status {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+}
+
+.motor-icon {
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 18px;
+  background: #eef3fb;
+  color: var(--navy);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.motor-icon.running {
+  background: #e5f7ec;
+  color: #16834a;
+}
+
+.motor-icon.stopped {
+  background: #fff0ed;
+  color: #bd3d2b;
+}
+
+#motorState {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 15px;
+  background: #f7f9fc;
+  border-radius: 12px;
+}
+
+.status-item strong {
+  font-size: 0.88rem;
+}
+
+.mode-selector {
+  display: flex;
+  gap: 10px;
+  padding: 5px;
+  background: #f0f3f8;
+  border-radius: 13px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 12px;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.mode-btn.active {
+  background: var(--navy);
+  color: white;
+  box-shadow: 0 3px 9px rgb(16 42 86 / 18%);
+}
+
+.help-text {
+  padding: 12px 14px;
+  border-left: 3px solid var(--yellow);
+  border-radius: 5px;
+  background: #fffbeb;
+  font-size: 0.9rem;
+  color: #5e4a12;
+}
+
+.control-btn {
+  min-height: 60px;
+  padding: 12px;
+  background: var(--navy);
+  border: 1px solid var(--navy);
+  border-radius: 12px;
+  color: white;
+  font-weight: 700;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.control-btn:not(:disabled):hover {
+  background: var(--blue);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.control-btn:disabled {
+  opacity: 0.4;
+}
+
+.control-btn.stop-btn {
+  background: #b83232;
+  border-color: #b83232;
+}
+
+.control-arrow {
+  margin-right: 7px;
+  font-size: 1.2rem;
+}
+
+.action-message {
+  min-height: 22px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.action-message.error {
+  color: #b42318;
+}
+
+.member-card {
+  padding: 12px;
+  text-align: center;
+  background: #f7f9fc;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.member-photo {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #e7edf6;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.member-name {
+  margin: 12px 0 0;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 576px) {
+  .panel {
+    padding: 18px;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-mark {
+    width: 50px;
+    height: 50px;
+  }
+}
