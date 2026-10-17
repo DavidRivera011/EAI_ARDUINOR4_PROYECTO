@@ -67,19 +67,23 @@ function renderStatus(data) {
   currentMode = data.mode;
 
   if (typeof data.distanceCm === "number") {
-    elements.distance.textContent = data.distanceCm.toFixed(1);
+  elements.distance.textContent = data.distanceCm.toFixed(1);
 
-    const percentage = Math.min(
-      100,
-      Math.max(0, (data.distanceCm / 60) * 100)
-    );
+  const percentage = Math.min(
+    100,
+    Math.max(0, (data.distanceCm / 60) * 100)
+  );
 
-    elements.distanceBar.style.width = `${percentage}%`;
-    elements.distanceProgress.setAttribute(
-      "aria-valuenow",
-      String(data.distanceCm)
-    );
-  }
+  elements.distanceBar.style.width = `${percentage}%`;
+  elements.distanceProgress.setAttribute(
+    "aria-valuenow",
+    String(data.distanceCm)
+  );
+} else {
+  elements.distance.textContent = "--";
+  elements.distanceBar.style.width = "0%";
+  elements.distanceProgress.setAttribute("aria-valuenow", "0");
+}
 
   elements.motorState.textContent = data.motorState;
   elements.modeValue.textContent =
@@ -104,8 +108,12 @@ function renderStatus(data) {
   elements.lastUpdate.textContent =
     new Date(data.timestamp || Date.now()).toLocaleTimeString("es-SV");
 
-  connected = true;
-  elements.alert.hidden = true;
+  connected = data.simulated === true || data.deviceOnline === true;
+
+  elements.alert.hidden = connected;
+  elements.alert.textContent = connected
+  ? ""
+  : "API disponible, pero el Arduino no está conectado.";
 
   updateControls();
 }
