@@ -1,3 +1,4 @@
+
 #include <WiFiS3.h>
 #include <WiFiSSLClient.h>
 #include <ArduinoJson.h>
@@ -7,34 +8,127 @@
 // CONFIGURACION
 // =====================================================
 
-const char WIFI_SSID[] = SECRET_SSID;
-const char WIFI_PASSWORD[] = SECRET_PASS;
-const char DEVICE_API_KEY[] = SECRET_DEVICE_API_KEY;
-
 const char API_HOST[] = "eai441-control-giro-api.onrender.com";
-const char DEVICE_API_KEY[] = "PEGA_AQUI_TU_DEVICE_API_KEY";
-
+const char DEVICE_API_KEY[] = SECRET_DEVICE_API_KEY;
 const int API_PORT = 443;
 
-// Pines provisionales del HC-SR04.
-// Confirma que el shield no los utiliza antes de conectar.
-const int TRIG_PIN = 7;
-const int ECHO_PIN = 8;
+// HC-SR04
+const int TRIG_PIN = A1;
+const int ECHO_PIN = A2;
+
+// Pines internos del shield L293D compatible con V1
+const int MOTOR_PWM_PIN = 11;   // Velocidad de M1
+const int MOTOR_DIR_CLK = 4;    // Reloj del registro
+const int MOTOR_DIR_EN = 7;     // Habilitacion del registro
+const int MOTOR_DIR_SER = 8;    // Datos del registro
+const int MOTOR_DIR_LATCH = 12; // Latch del registro
+
+// Bits de direccion del motor M1
+const uint8_t MOTOR1_A = 2;
+const uint8_t MOTOR1_B = 3;
+
+const int MOTOR_SPEED = 180; // Rango de 0 a 255
 
 const unsigned long COMMAND_INTERVAL_MS = 1500;
 const unsigned long TELEMETRY_INTERVAL_MS = 3000;
 
-WiFiSSLClient sslClient;
-
 String currentMode = "AUTOMATICO";
 String currentMotorState = "DETENIDO";
+
 int lastRevision = -1;
 
 unsigned long lastCommandRequest = 0;
 unsigned long lastTelemetrySent = 0;
 
+// Estado de direccion de los cuatro motores en el registro
+uint8_t motorDirectionBits = 0;
+
 // =====================================================
-// COMUNICACION HTTPS CON LA API
+// CONTROL DEL REGISTRO DEL SHIELD
+// =====================================================
+
+void writeMotorRegister() {
+  digitalWrite(MOTOR_DIR_LATCH, LOW);
+
+  shiftOut(
+    MOTOR_DIR_SER,
+    MOTOR_DIR_CLK,
+    MSBFIRST,
+    motorDirectionBits
+  );
+
+  digitalWrite(MOTOR_DIR_LATCH, HIGH);
+}
+
+void setupMotorShield() {
+  pinMode(MOTOR_PWM_PIN, OUTPUT);
+  pinMode(MOTOR_DIR_CLK, OUTPUT);
+  pinMode(MOTOR_DIR_EN, OUTPUT);
+  pinMode(MOTOR_DIR_SER, OUTPUT);
+  pinMode(MOTOR_DIR_LATCH, OUTPUT);
+
+  // Habilitar el registro del shield
+  digitalWrite(MOTOR_DIR_EN, LOW);
+
+  digitalWrite(MOTOR_DIR_LATCH, LOW);
+  digitalWrite(MOTOR_DIR_CLK, LOW);
+  digitalWrite(MOTOR_DIR_SER, LOW);
+
+  analogWrite(MOTOR_PWM_PIN, 0);
+
+  motorDirectionBits = 0;
+  writeMotorRegister();
+}
+
+// =====================================================
+// MOTOR M1: DERECHA, IZQUIERDA Y DETENER
+// =====================================================
+
+void applyMotorState(const String& newState) {
+  if (newState != "DERECHA" &&
+      newState != "IZQUIERDA" &&
+      newState != "DETENIDO") {
+    return;
+  }
+
+  if (newState == currentMotorState) {
+    return;
+  }
+
+  // Quitar primero la potencia del motor
+  analogWrite(MOTOR_PWM_PIN, 0);
+
+  // Limpiar los dos bits correspondientes a M1
+  motorDirectionBits &= ~(
+    (1 << MOTOR1_A) |
+    (1 << MOTOR1_B)
+  );
+
+  if (newState == "DERECHA") {
+    motorDirectionBits |= (1 << MOTOR1_A);
+  }
+  else if (newState == "IZQUIERDA") {
+    motorDirectionBits |= (1 << MOTOR1_B);
+  }
+
+  // Enviar la direccion al shield
+  writeMotorRegister();
+
+  // DETENIDO: direccion neutra y PWM cero
+  if (newState == "DETENIDO") {
+    analogWrite(MOTOR_PWM_PIN, 0);
+  } else {
+    analogWrite(MOTOR_PWM_PIN, MOTOR_SPEED);
+  }
+
+  currentMotorState = newState;
+
+  Serial.print("Motor M1: ");
+  Serial.println(currentMotorState);
+}
+
+// =====================================================
+// HTTPS CON RENDER
 // =====================================================
 
 String apiRequest(
@@ -48,7 +142,7 @@ String apiRequest(
   Serial.println(path);
 
   if (!client.connect(API_HOST, API_PORT)) {
-    Serial.println("No se pudo conectar con Render.");
+    Serial.println("Error de conexion con Render.");
     client.stop();
     return "";
   }
@@ -60,10 +154,10 @@ String apiRequest(
 
   client.print("Host: ");
   client.println(API_HOST);
-
   client.println("Connection: close");
   client.println("Accept: application/json");
-  client.println("X-Device-Key: " + String(DEVICE_API_KEY));
+  client.print("X-Device-Key: ");
+  client.println(DEVICE_API_KEY);
 
   if (strcmp(method, "POST") == 0) {
     client.println("Content-Type: application/json");
@@ -72,7 +166,7 @@ String apiRequest(
   }
 
   client.println();
-  
+
   if (strcmp(method, "POST") == 0) {
     client.print(body);
   }
@@ -100,14 +194,11 @@ String apiRequest(
     return "";
   }
 
-  String httpBody = response.substring(bodyStart + 4);
-
-  Serial.println("Respuesta recibida.");
-  return httpBody;
+  return response.substring(bodyStart + 4);
 }
 
 // =====================================================
-// SENSOR ULTRASONICO HC-SR04
+// SENSOR HC-SR04
 // =====================================================
 
 float readDistanceCm() {
@@ -129,7 +220,7 @@ float readDistanceCm() {
 }
 
 // =====================================================
-// LOGICA DE GIRO AUTOMATICO
+// LOGICA AUTOMATICA
 // =====================================================
 
 String getAutomaticState(float distanceCm) {
@@ -149,29 +240,7 @@ String getAutomaticState(float distanceCm) {
 }
 
 // =====================================================
-// CONTROL DEL MOTOR
-// =====================================================
-
-// IMPORTANTE:
-// Esta funcion NO acciona el motor todavia.
-// Debe implementarse cuando confirmemos el modelo
-// exacto del shield L293D y su biblioteca compatible.
-
-void applyMotorState(const String& newState) {
-  if (newState != "DERECHA" &&
-      newState != "IZQUIERDA" &&
-      newState != "DETENIDO") {
-    return;
-  }
-
-  currentMotorState = newState;
-
-  Serial.print("Estado solicitado para el motor: ");
-  Serial.println(currentMotorState);
-}
-
-// =====================================================
-// CONSULTAR MODO Y COMANDO
+// CONSULTAR MODO Y COMANDO DE LA WEB
 // =====================================================
 
 void pollCommands() {
@@ -181,6 +250,7 @@ void pollCommands() {
   );
 
   if (response.length() == 0) {
+    Serial.println("No se recibieron comandos.");
     return;
   }
 
@@ -204,7 +274,6 @@ void pollCommands() {
     if (currentMode == "MANUAL") {
       applyMotorState(String(command));
     } else {
-      // El movimiento automatico lo decide el sensor.
       applyMotorState("DETENIDO");
     }
   }
@@ -237,7 +306,7 @@ void sendTelemetry(float distanceCm) {
 }
 
 // =====================================================
-// CONEXION WIFI
+// WIFI
 // =====================================================
 
 void connectWiFi() {
@@ -263,19 +332,22 @@ void connectWiFi() {
 void setup() {
   Serial.begin(115200);
 
+  // Inicializar el motor y dejarlo detenido
+  setupMotorShield();
+
+  // Inicializar el sensor
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
-
   digitalWrite(TRIG_PIN, LOW);
 
   Serial.println("EAI441 - Control de giro");
-  Serial.println("Inicializando Arduino UNO R4 WiFi...");
+  Serial.println("Arduino UNO R4 WiFi");
 
   connectWiFi();
 }
 
 // =====================================================
-// LOOP PRINCIPAL
+// LOOP
 // =====================================================
 
 void loop() {
