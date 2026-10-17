@@ -12,7 +12,10 @@ app.get("/", (req, res) => {
   res.json({
     name: "EAI441 Control de Giro",
     status: "API funcionando",
-    mode: "SIMULACION"
+    mode:
+      String(process.env.SIMULATION_MODE).toLowerCase() === "false"
+        ? "REAL"
+        : "SIMULACION"
   });
 });
 
